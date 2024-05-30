@@ -13,6 +13,12 @@ class Snake{
             this->Head = head;
             this->Tail = tail;
         };
+        int getHead(){
+            return Head;
+        }
+        int getTail(){
+            return Tail;
+        }
 };
 
 class Ladder{
@@ -24,6 +30,12 @@ class Ladder{
             this->Head = head;
             this->Tail = tail;
         };
+        int getHead(){
+            return Head;
+        }
+        int getTail(){
+            return Tail;
+        }
 };
 
 class Player{
@@ -38,18 +50,27 @@ class Player{
         void updateScore(int score){
             this->Score = score;
         }
+        string getName(){
+            return Name;
+        }
+        int getScore(){
+            return Score;
+        }
+        void setScore(int score){
+            this->Score = score;
+        }
 };
 
 class Board{
     private : 
         int Row;
         int Col;
-        vector<vector<int>> MyBoard;
+        vector<vector<int> > MyBoard;
     public :
         Board(int row, int col){
             this->Row = row;
             this->Col = col;
-            vector<vector<int>> myBoard(Row, vector<int>(Col, 0));
+            vector<vector<int> > myBoard(Row, vector<int>(Col, 0));
             MyBoard = myBoard;
         };
 };
@@ -66,15 +87,42 @@ class Die{
         }
 };
 
-class UpdateScore{
-    void updateMyScore(Player player, int score){
-        player.updateScore(score);
-    }
+class EncounterSnake_Ladder{
+    private:
+        unordered_map<int, int> headToTail;
+    public:
+        EncounterSnake_Ladder(vector<Snake*> snakes, vector<Ladder*> ladders){
+            for(int i=0;i<snakes.size();i++){
+                headToTail[snakes[i]->getHead()] = snakes[i]->getTail();
+            }
+            for(int i=0;i<ladders.size();i++){
+                headToTail[ladders[i]->getHead()] = snakes[i]->getTail();
+            }
+        }
+        unordered_map<int, int> getHeadToTail(){
+            return headToTail;
+        }
+
 };
 
-class EncounterSnake_Ladder{
-    
+class UpdateScore{
+    private:
+        unordered_map<Player, int> playerToScore;
+    public:
+        pair<bool, int> updateMyScore(Player* player, int score, EncounterSnake_Ladder* headToTail){
+            int currScore = player->getScore() + score;
+            int finalScore =  headToTail->getHeadToTail().find(currScore) != headToTail->getHeadToTail().end() ? headToTail->getHeadToTail()[currScore] : currScore;
+            player->updateScore(finalScore);
+            //cout<<"Player " + player->getName() + " moves to " + to_string(player->getScore())<<endl;
+            return make_pair(reachedHome(player, finalScore), finalScore);
+        }
+        bool reachedHome(Player* player, int score){
+            if(score >= 100)
+                return true;
+            return false;
+        }
 };
+
 
 int main(){
     int row = 10, col = 10, noOfPlayer = 0, noOfSnakes = 0, noOfLadders = 0;
@@ -117,6 +165,24 @@ int main(){
         Ladder* ladder = new Ladder(head, tail);
         ladders.push_back(ladder);
     }
+    Die* mydie = new Die(6);
+    EncounterSnake_Ladder* snakeAndLaddersHead = new EncounterSnake_Ladder(snakes, ladders);
+    unordered_map<int, int> headToTail = snakeAndLaddersHead->getHeadToTail();
+    UpdateScore* scoreUpdater = new UpdateScore();
+    do{
+        for(int i=0;i<players.size();i++){
+            int dieScore = mydie->RollDie();
+            string playerName = players[i]->getName();
+            int oldScore = players[i]->getScore();
+            cout<<"Player " + playerName + " has rolled die to " + to_string(dieScore)<<endl;
+            pair<bool, int> reachedAndScore =  scoreUpdater->updateMyScore(players[i], dieScore, snakeAndLaddersHead);
+            int newScore = players[i]->getScore();
+            cout<<"Player " + playerName + " Moved from " + to_string(oldScore) + " to " + to_string(newScore)<<endl;
+            if(reachedAndScore.first)
+                return 1;
+        }
+    } while (true);
+    return 0;
 };
 
 
